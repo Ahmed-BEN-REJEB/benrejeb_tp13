@@ -1,0 +1,86 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <title>Ajax avec l'API fetch</title>
+    <meta http-equiv="Content-Type" content="text/html; charset=UTF-8" />
+    <link rel="stylesheet" type="text/css" href="css/style.css" />
+
+
+    <script>
+        // On définit la catégorie à sauvegarder
+        // Note : on pourrait aussi le récupérer depuis un formulaire de saisie
+        const categorieASauvegarder = {
+            "libelle": "Quincaillerie",
+            "description": "clous, vis, boulons"
+        };
+
+        // Montrer les résultats quand tout s'est bien passé
+        function showResult(resultJson) {
+            // cf. https://developer.mozilla.org/en-US/docs/Web/API/console#outputting_text_to_the_console
+            console.log("Réponse de l'API : %o", resultJson);
+            alert("Catégorie enregistrée avec succès");
+        }
+
+        // Afficher les erreurs quand l'API a signalé une erreur
+        function showError(error) {
+            console.error("L'API signale l'erreur %o", error);
+            alert("Erreur de l'API : " + error.message);
+        }
+
+        /**
+         * Faire un appel AJAX avec l'API fetch
+         * Permet de récupérer erreur réseau et erreur de l'API
+         * usage :
+         * doAjaxRequest(url, options).then(showResult).catch(showError);
+         * @param {string} url L'URL de l'API
+         * @param {object} options Les options de la requête AJAX
+         * @returns {Promise} Une promesse qui sera résolue avec le résultat de l'appel AJAX
+         * @throws {object} Une exception qui sera levée si l'API a signalé une erreur
+         */
+        async function doAjaxRequest(url, options) {
+            // On fait l'appel AJAX
+            const response = await fetch(url, options);
+            // On récupère le résultat transmis en format JSON
+            const result = await response.json();
+            // L'API a signalé une erreur, on lève une exception
+            if (!response.ok) throw result;
+            // Tout s'est bien passé, on renvoie le résultat
+            return result;
+        }
+
+
+        function enregistreCategorie() {
+            console.log("Données envoyées : %o", categorieASauvegarder);
+            const options = {
+                method: "POST",
+                headers: {
+                    // On indique qu'on envoie du JSON
+                    "Content-Type": "application/json",
+                    // On indique qu'on veut du JSON en réponse
+                    "accept": "application/json",
+                },
+                // On envoie les données au format JSON
+                // dans le corps de la requête
+                body: JSON.stringify(categorieASauvegarder)
+            };
+            doAjaxRequest("api/categories", options)
+                .then(showResult)
+                .catch(showError);
+        }
+    </script>
+</head>
+
+<body>
+    <h1>Exemple d'appel AJAX avec l'API fetch</h1>
+    <h2>Sauvegarder une catégorie</h2>
+
+    <button onclick="enregistreCategorie()">Enregistrer une nouvelle catégorie</button><br>
+
+    <div>Ouvrez la console pour voir le résultat</div>
+    <hr>
+    <a href='api/categories' target="_blank">La liste des catégories (JSON)</a><br />
+    <a href="/">Retour au menu</a>
+</body>
+
+</html>
