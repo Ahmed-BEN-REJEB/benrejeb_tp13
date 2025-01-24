@@ -27,6 +27,9 @@ class CreationCommandeTest {
     void testCreerCommandePourGrosClient() {
         var commande = service.creerCommande(ID_GROS_CLIENT);
         assertNotNull(commande.getNumero(), "On doit avoir la clé de la commande");
+        int articlesCommandes = daoClient.nombreArticlesCommandesPar(ID_GROS_CLIENT);
+        System.out.println("Articles commandés pour le client " + ID_GROS_CLIENT + ": " + articlesCommandes);
+
         assertEquals(REMISE_POUR_GROS_CLIENT, commande.getRemise(),
             "Une remise de 15% doit être appliquée pour les gros clients");
     }

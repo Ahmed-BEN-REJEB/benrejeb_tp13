@@ -2,6 +2,7 @@ package comptoirs.service;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
+import java.util.NoSuchElementException;
 
 import org.springframework.lang.NonNull;
 import org.springframework.stereotype.Service;
@@ -106,8 +107,40 @@ public class CommandeService {
      */
     @Transactional
     public Ligne ajouterLigne(int commandeNum, int produitRef, @Positive int quantite) {
-        // TODO : implémenter cette méthode
-        throw new UnsupportedOperationException("Pas encore implémenté");
+        
+        // Vérification de l'existence de la commande
+        var commande = commandeDao.findById(commandeNum).orElseThrow(() ->
+            new NoSuchElementException("Commande inexistante"));
+
+        // Vérification que la commande n'est pas déjà envoyée
+        if (commande.getEnvoyeele() != null) {
+            throw new IllegalStateException("Impossible d'ajouter une ligne à une commande déjà envoyée.");
+        }
+
+        // Vérification de l'existence du produit
+        var produit = produitDao.findById(produitRef).orElseThrow(() ->
+            new NoSuchElementException("Produit inexistant"));
+
+        // Vérification que le produit est disponible
+        if (produit.getUnitesEnStock() <= produit.getUnitesCommandees()) {
+            throw new IllegalStateException("Produit indisponible.");
+        }
+
+        // Vérification que la quantité demandée respecte le stock disponible
+        int stockDisponible = produit.getUnitesEnStock() - produit.getUnitesCommandees();
+        if (quantite > stockDisponible) {
+            throw new IllegalStateException("Quantité demandée dépasse le stock disponible.");
+        }
+
+        // Création de la ligne de commande
+        var nouvelleLigne = new Ligne(commande, produit, quantite);
+        ligneDao.save(nouvelleLigne);
+
+        // Mise à jour de la quantité commandée pour le produit
+        produit.setUnitesCommandees(produit.getUnitesCommandees() + quantite);
+        produitDao.save(produit);
+
+        return nouvelleLigne;
     }
 
     /**
@@ -130,7 +163,31 @@ public class CommandeService {
      */
     @Transactional
     public Commande enregistreExpedition(int commandeNum) {
-        // TODO : implémenter cette méthode
-        throw new UnsupportedOperationException("Pas encore implémenté");
+        
+        // Vérification de l'existence de la commande
+        var commande = commandeDao.findById(commandeNum).orElseThrow(() ->
+            new NoSuchElementException("Commande inexistante"));
+        
+        // Vérification que la commande n'a pas encore été envoyée
+        if (commande.getEnvoyeele() != null) {
+            throw new IllegalStateException("La commande a déjà été envoyée.");
+        }
+
+        // Mise à jour des quantités en stock et en commande pour chaque produit
+        for (var ligne : commande.getLignes()) {
+            var produit = ligne.getProduit();
+            int quantiteLigne = ligne.getQuantite();
+
+            // Mise à jour des quantités
+            produit.setUnitesEnStock(produit.getUnitesEnStock() - quantiteLigne);
+            produit.setUnitesCommandees(produit.getUnitesCommandees() - quantiteLigne);
+            produitDao.save(produit);
+        }
+
+        // Enregistrement de la date d'expédition
+        commande.setEnvoyeele(LocalDate.now());
+        commandeDao.save(commande);
+
+        return commande;
     }
 }
